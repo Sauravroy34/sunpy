@@ -48,7 +48,6 @@ def test_fetch(client,tmpdir):
     assert expected_file.exists()
     os.remove(expected_file)
 
-    # Verify the file has been deleted
     assert not expected_file.exists()
 
 
