@@ -5,6 +5,7 @@ from pathlib import Path
 
 import requests
 
+from sunpy import config
 from sunpy.net.attr import and_
 from sunpy.net.base_client import BaseClient, QueryResponseTable
 from sunpy.net.solarnet.attrs import Dataset, walker
@@ -17,28 +18,23 @@ class SolarnetClient(BaseClient):
     """
     Provides access to query and download from the SOLARNET Virtual Observatory.
 
-    Methods
-    -------
-    search(*query)
-        Search the Solarnet database for datasets matching the query.
-    downloader(link, overwrite=False, progress=True, wait=True, path=None)
-        Download a file from a given link.
-    fetch(query_results, overwrite=False, path=None, **kwargs)
-        Fetch one or more datasets based on query results.
-    load_solarnet_values()
-        Load Solarnet dataset values from a local JSON file.
-    register_values()
-        Register Solarnet-specific attributes with Fido.
-    _can_handle_query(*query)
-        Determine if the query can be handled by this client.
+    The SVO is a service first supported by the `SOLARNET <http://solarnet-east.eu/>`_ project,
+    funded by the European Commission’s FP7 Capacities Programme under the Grant Agreement 312495.
+    Then made operational thanks to the `SOLARNET2 <https://solarnet-project.eu/>`_ project, funded by the European Union's Horizon 2020
+    Research and Innovation Programme under Grant Agreement 824135.
+    It's purpose is to collect metadata from as many solar observations as possible,
+    especially those involved in the SOLARNET projects, in a common catalog and make them available to the scientific community.
+
+    There is various ways one can access SVO `Data <https://solarnet.oma.be/#introduction>`_ the client here attempts to gather data using
+    RESTful API (available `documentation <https://solarnet.oma.be/svo_restful_api_user_manual.html>`_
 
     Examples
     --------
     >>> from sunpy.net import Fido, attrs as a
-    >>> query = [a.solarnet.Dataset.eui_level_2 , a.solarnet.Limit(2) , a.Detector("HRI_EUV")]  # doctest: +SKIP
-    >>> url = Fido.search(*query)   # doctest: +SKIP
-    >>> print(url)  # doctest: +SKIP
-    Index    datasets                              name
+    >>> query = [a.solarnet.Dataset.eui_level_2 , a.solarnet.Limit(2) , a.Detector("HRI_EUV")]
+    >>> url = Fido.search(*query)   # doctest: +REMOTE_DATA
+    >>> print(url)  # doctest: +REMOTE_DATA
+    index       datasets                              name
     ----- -------------------- --------------------------------------------------
         0 metadata_eui_level_2 solo_L2_eui-hrieuvopn-image_20200512T122556952_V06
         1 metadata_eui_level_2 solo_L2_eui-hrieuvopn-image_20200512T122606952_V06
@@ -61,19 +57,20 @@ class SolarnetClient(BaseClient):
         Examples
         --------
         >>> from sunpy.net import Fido, attrs as a
-        >>> query = [a.solarnet.Dataset.eui_level_2 , a.solarnet.Limit(2) , a.Detector("HRI_EUV")]  # doctest: +SKIP
-        >>> url = Fido.search(*query)   # doctest: +SKIP
-        >>> print(url)  # doctest: +SKIP
-        Index    datasets                              name
-        ----- -------------------- --------------------------------------------------
-            0 metadata_eui_level_2 solo_L2_eui-hrieuvopn-image_20200512T122556952_V06
-            1 metadata_eui_level_2 solo_L2_eui-hrieuvopn-image_20200512T122606952_V06
+        >>> query = [a.solarnet.Dataset.lyra_level_2 , a.solarnet.Limit(3) , a.Detector("HRI_EUV")]
+        >>> url = Fido.search(*query)   # doctest: +REMOTE_DATA
+        >>> print(url)  # doctest: +REMOTE_DATA
+        index        datasets                    name
+        ----- --------------------- -----------------------------
+            0 metadata_lyra_level_2 lyra_20100106-000000_lev2_std
+            1 metadata_lyra_level_2 lyra_20100107-000000_lev2_std
+            2 metadata_lyra_level_2 lyra_20100108-000000_lev2_std
         """
         results = []
         query = and_(*query)
         block = walker.create(query)[0]
         if "datasets" in block:
-            url = base_url.format(block["datasets"])
+            url = _BASE_URL.format(block["datasets"])
             source = block.pop("datasets")
         self.links = self._generate_links(block, url)
 
@@ -91,14 +88,14 @@ class SolarnetClient(BaseClient):
 
         Parameters
         ----------
-        block : dict
+        block : `dict`
             Query block parameters.
-        url : str
+        url : `str`
             Base URL for the query.
 
         Returns
         -------
-        list
+        links : `list`
             List of dataset file URLs.
         """
         links = []
@@ -115,31 +112,32 @@ class SolarnetClient(BaseClient):
 
         Parameters
         ----------
-        link : str
+        link : `str`
             URL of the file to download.
-        overwrite : bool, optional
+        overwrite : `bool`, optional
             Whether to overwrite existing files (default is False).
-        progress : bool, optional
+        progress : `bool`, optional
             Show download progress (default is True).
-        wait : bool, optional
+        wait : `bool`, optional
             Wait for the download to finish (default is True).
-        path : str or Path, optional
-            Path template for saving the downloaded file.
+        path : `str` or `Path`
+            Path to save data to, defaults to SunPy download dir
 
         Returns
         -------
-        Results
-            Result of the download operation.
+        Results : `parfive.Results`
+            A `parfive.Results` instance or `None` if no URLs to download
         """
         downloader = Downloader(progress=progress, overwrite=overwrite, max_splits=1)
         link_name = link.split('/')[-1]
         if path is None:
-            default_dir = "Downloads"
+            default_dir = config.get("downloads", "download_dir")
             path = os.path.join(default_dir, '{file}')
         elif isinstance(path, Path):
             path = str(path)
         if isinstance(path, str) and '{file}' not in path:
             path = os.path.join(path, '{file}')
+
         file_name = path.format(file=link_name)
         downloader.enqueue_file(link, filename=file_name, max_splits=1)
 
@@ -154,12 +152,12 @@ class SolarnetClient(BaseClient):
 
         Parameters
         ----------
-        query_results : QueryResponseTable
+        query_results : `~sunpy.net.base_client.QueryResponseTable`
             Query results to fetch.
-        overwrite : bool, optional
+        overwrite : `bool`, optional
             Whether to overwrite existing files (default is False).
-        path : str or Path, optional
-            Path template for saving the downloaded files.
+        path : `str` or `Path`, optional
+            Path to save data to, defaults to SunPy download dir
         """
         indices = (
             [query_results[0]] if len(query_results) == 3
@@ -192,27 +190,20 @@ class SolarnetClient(BaseClient):
         Make a GET request to https://solarnet.oma.be/service/api/svo/dataset to do so.
         """
         dir = os.path.dirname(os.path.realpath(__file__))
-        url = "https://solarnet.oma.be/service/api/svo/dataset"
+        url = _BASE_URL.format("dataset")
         response = requests.get(url, params={"limit": 100})
         data = response.json()
         values = {}
         for obj in data.get("objects", []):
             name = obj["name"].replace(" ", "_").lower()
             description =  obj.get("instrument", {}).get("description") or  obj.get("telescope", {}).get("description")
-            values[name] = description.split(".")[0]
+            values[name] = description.split(". ")[0]
         with open(os.path.join(dir, 'data', 'datasets.json'), 'w') as attrs_file:
             json.dump(dict(sorted(values.items())), attrs_file, indent=2)
 
     @classmethod
     def register_values(cls):
-        """
-        Register the Solarnet-specific attributes with Fido.
-
-        Returns
-        -------
-        dict
-            The dictionary containing the values formed into attributes.
-        """
+        #loads the solarnet values
         return cls.load_solarnet_values()
 
     @classmethod
@@ -221,13 +212,6 @@ class SolarnetClient(BaseClient):
 
     @staticmethod
     def _can_handle_query(*query):
-        """
-        Determine if the query can be handled by this client.
-
-        Returns
-        -------
-        bool
-            True if the query can be handled, False otherwise.
-        """
+        # checks for dataset instance in query
         from sunpy.net import attrs as a
         return any(isinstance(q, a.solarnet.Dataset) for q in query)

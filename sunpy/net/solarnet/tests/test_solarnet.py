@@ -65,3 +65,9 @@ def test_complex_query():
     assert len(url) == 2
     assert len(url[0]) == 2
     assert len(url[1]) == 3
+    assert "lyra_20100106-000000_lev2_std" in url[0]["name"]
+
+    assert "solo_L2_eui-fsi304-image_20200512T085922556_V06" in url[1]["name"]
+
+    assert "metadata_lyra_level_2" in url[0]["datasets"]
+    assert "metadata_eui_level_2"  in url[1]["datasets"]
