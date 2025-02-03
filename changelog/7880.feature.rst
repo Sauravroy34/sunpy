@@ -1,1 +1,2 @@
-Added support for querying data from solarnet API using SolarnetClient .
+Added support for querying data from solarnet API (https://solarnet.oma.be/) using SolarnetClient in `~sunpy.net.solarnet`.
+
