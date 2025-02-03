@@ -46,13 +46,13 @@ class SolarnetClient(BaseClient):
 
         Parameters
         ----------
-        *query : sunpy.net.attrs
+        *query : `~sunpy.net.attrs`
             Attributes to search for datasets.
 
         Returns
         -------
-        QueryResponseTable
-            Table of search results.
+        `~sunpy.net.base_client.QueryResponseTable`
+        A table containing the search results.
 
         Examples
         --------
@@ -120,12 +120,12 @@ class SolarnetClient(BaseClient):
             Show download progress (default is True).
         wait : `bool`, optional
             Wait for the download to finish (default is True).
-        path : `str` or `Path`
+        path : `str` or `Pathlib.Path`
             Path to save data to, defaults to SunPy download dir
 
         Returns
         -------
-        Results : `parfive.Results`
+        Results : `~parfive.Results`
             A `parfive.Results` instance or `None` if no URLs to download
         """
         downloader = Downloader(progress=progress, overwrite=overwrite, max_splits=1)
@@ -156,7 +156,7 @@ class SolarnetClient(BaseClient):
             Query results to fetch.
         overwrite : `bool`, optional
             Whether to overwrite existing files (default is False).
-        path : `str` or `Path`, optional
+        path : `str` or `pathlib.Path`, optional
             Path to save data to, defaults to SunPy download dir
         """
         indices = (
