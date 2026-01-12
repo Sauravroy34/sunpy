@@ -16,15 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sunpy repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Install Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
       - name: Install dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y libopencv-dev
           python -m pip install --upgrade pip
           pip install asv virtualenv
